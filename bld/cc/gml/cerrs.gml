@@ -196,8 +196,11 @@ In the example "i = (1,5);", the expression "1," is meaningless.
 :MSGJTXT. ポインタは切り詰められました
 :WARNING. 1
 .np
-A far pointer is being passed to a function that is expecting a near
-pointer, or a far pointer is being assigned to a near pointer.
+A far or based pointer is being passed to a function that is expecting
+a near pointer, or a far or based pointer is being assigned to a near
+pointer.
+The segment part of the pointer is lost.
+Use an explicit cast if only the offset is required.
 :MSGSYM. ERR_POINTER_TYPE_MISMATCH
 :MSGTXT. Pointer type mismatch
 :MSGJTXT. ポインター型が不一致です

@@ -113,25 +113,25 @@ void_bptr __MemAllocator( unsigned req_size, heap_bptr heap )
                     FREELIST   pnew;                    // start of new piece
 
                     pnew = (FREELIST)((PTR)pcur + size);
-                    HEAP()->rover.nptr = pnew;          // update rover
+                    HEAP()->rover.nptr = (freelist_nptr)pnew;          // update rover
                     pnew->len = len;                    // set new size
                     pcur->len = size;                   // reset current size
                     pprev = pcur->prev.nptr;            // update next/prev links
-                    pnew->prev.nptr = pprev;
+                    pnew->prev.nptr = (freelist_nptr)pprev;
                     pnext = pcur->next.nptr;
-                    pnew->next.nptr = pnext;
-                    pprev->next.nptr = pnew;
-                    pnext->prev.nptr = pnew;
+                    pnew->next.nptr = (freelist_nptr)pnext;
+                    pprev->next.nptr = (freelist_nptr)pnew;
+                    pnext->prev.nptr = (freelist_nptr)pnew;
                 } else {                                // just use this chunk
                     FREELIST   pprev;                   // before current
                     FREELIST   pnext;                   // after current
 
                     HEAP()->numfree--;                  // 1 fewer entries in free list
                     pprev = pcur->prev.nptr;
-                    HEAP()->rover.nptr = pprev;         // update rover
+                    HEAP()->rover.nptr = (freelist_nptr)pprev;         // update rover
                     pnext = pcur->next.nptr;            // update next/prev links
-                    pprev->next.nptr = pnext;
-                    pnext->prev.nptr = pprev;
+                    pprev->next.nptr = (freelist_nptr)pnext;
+                    pnext->prev.nptr = (freelist_nptr)pprev;
                 }
                 SET_BLK_INUSE( pcur );                  // mark as allocated
                                                         // get pointer to user area
@@ -182,12 +182,12 @@ void __MemFree( void_bptr cstg, heap_bptr heap )
                     len += pnext->len;                  // include the length
                     pfree->len = len;                   // update pfree length
                     if( pnext == HEAP()->rover.nptr ) { // check for rover
-                        HEAP()->rover.nptr = pfree;     // update rover
+                        HEAP()->rover.nptr = (freelist_nptr)pfree;     // update rover
                     }
                     pprev = pnext->prev.nptr;           // fixup next/prev links
                     pnext = pnext->next.nptr;
-                    pprev->next.nptr = pnext;
-                    pnext->prev.nptr = pprev;
+                    pprev->next.nptr = (freelist_nptr)pnext;
+                    pnext->prev.nptr = (freelist_nptr)pprev;
                     HEAP()->numfree--;                  // reduce numfree
                     break;                              // proceed to coalesce code
                 }
@@ -305,15 +305,15 @@ found_it:
                 len += pprev->len;                      // udpate len
                 pprev->len = len;
                 if( HEAP()->rover.nptr == pfree ) {     // check rover impact
-                    HEAP()->rover.nptr = pprev;         // update rover
+                    HEAP()->rover.nptr = (freelist_nptr)pprev;         // update rover
                 }
                 pfree = pprev;                          // now work with coalesced blk
             } else {
                 HEAP()->numfree++;                      // one more free entry
-                pfree->next.nptr = pnext;               // update next/prev entries
-                pfree->prev.nptr = pprev;
-                pprev->next.nptr = pfree;
-                pnext->prev.nptr = pfree;
+                pfree->next.nptr = (freelist_nptr)pnext;               // update next/prev entries
+                pfree->prev.nptr = (freelist_nptr)pprev;
+                pprev->next.nptr = (freelist_nptr)pfree;
+                pnext->prev.nptr = (freelist_nptr)pfree;
             }
             HEAP()->numalloc--;                         // one fewer allocated
 

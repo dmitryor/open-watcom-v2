@@ -536,6 +536,13 @@ static cmp_type CompatibleType( TYPEPTR typ1, TYPEPTR typ2, bool assignment, boo
 
                 size1 = TypeSize( typ1 );
                 size2 = TypeSize( typ2 );
+                /*
+                 * A based source stands for a far pointer, so assigning it
+                 * to a pointer that is not based truncates (see IsPtrConvSafe).
+                 */
+                if( (typ2_flags & FLAG_BASED) && (typ1_flags & FLAG_BASED) == 0 ) {
+                    size2 = TARGET_FAR_POINTER;
+                }
                 if( size1 < size2 ) {
                    ret_pq = PT;
                 } else if( size1 > size2 ) {
@@ -874,7 +881,7 @@ void CheckParmAssign( TYPEPTR typ1, TREEPTR opnd2, int parm_num, bool asgn_check
         break;
     case PT:
         if( asgn_check ) {
-            if( !IsPtrConvSafe( opnd2, typ1, typ2 ) ) {
+            if( !IsPtrConvSafe( opnd2, typ1, typ2, false ) ) {
                 CWarnP1( parm_num, ERR_POINTER_TRUNCATION );
             }
         } else if( parm_num ) {

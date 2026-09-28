@@ -100,8 +100,8 @@ int __HeapManager_expand( void_bptr cstg, size_t req_size, size_t *growth_size )
             }
             if( free_size < *growth_size || free_size - *growth_size < FRL_SIZE ) {
                 /* unlink small free block */
-                pprev->next.nptr = pnext;
-                pnext->prev.nptr = pprev;
+                pprev->next.nptr = (freelist_nptr)pnext;
+                pnext->prev.nptr = (freelist_nptr)pprev;
                 p1->len += free_size;
                 heap->numfree--;
                 if( free_size >= *growth_size ) {
@@ -112,10 +112,10 @@ int __HeapManager_expand( void_bptr cstg, size_t req_size, size_t *growth_size )
             } else {
                 p2 = FRLPTRADD( seg, p2, *growth_size );
                 p2->len = free_size - *growth_size;
-                p2->prev.nptr = pprev;
-                p2->next.nptr = pnext;
-                pprev->next.nptr = p2;
-                pnext->prev.nptr = p2;
+                p2->prev.nptr = (freelist_nptr)pprev;
+                p2->next.nptr = (freelist_nptr)pnext;
+                pprev->next.nptr = (freelist_nptr)p2;
+                pnext->prev.nptr = (freelist_nptr)p2;
                 p1->len += *growth_size;
                 return( __HM_SUCCESS );
             }

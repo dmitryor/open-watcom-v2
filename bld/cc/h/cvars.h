@@ -618,7 +618,7 @@ extern TREEPTR      AddOp( TREEPTR, TOKEN, TREEPTR );
 extern TREEPTR      InitAsgn( TYPEPTR, TREEPTR );
 extern TREEPTR      AsgnOp( TREEPTR, TOKEN, TREEPTR );
 extern TREEPTR      BinOp( TREEPTR, TOKEN, TREEPTR );
-extern bool         IsPtrConvSafe( TREEPTR, TYPEPTR, TYPEPTR );
+extern bool         IsPtrConvSafe( TREEPTR, TYPEPTR, TYPEPTR, bool );
 extern TREEPTR      CnvOp( TREEPTR, TYPEPTR, bool );
 extern TREEPTR      FlowOp( TREEPTR, opr_code, TREEPTR );
 extern void         CheckConst( TREEPTR );

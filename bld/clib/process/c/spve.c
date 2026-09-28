@@ -88,8 +88,11 @@
 
 #if defined( __DOS__ )
     typedef CHAR_TYPE __based( __segname( "_STACK" ) )  *char_type_stk_ptr;
+    /* a near heap block held as char_type_stk_ptr, back to a near pointer */
+    #define STK2NEAR( p )   ((CHAR_TYPE _WCNEAR *)(p))
 #else
     typedef CHAR_TYPE                                   *char_type_stk_ptr;
+    #define STK2NEAR( p )   (p)
 #endif
 
 #if defined( __DOS__ )
@@ -264,7 +267,7 @@ _WCRTLINK int __F_NAME(spawnve,_wspawnve)( int mode, const CHAR_TYPE * path,
         unsigned    segment;
 
         if( _dos_allocmem( envsize_paras, &segment ) != 0 ) {
-            LIB_FREE( np );
+            LIB_FREE( STK2NEAR( np ) );
             lib_free( _envptr );
             _POSIX_HANDLE_CLEANUP;
             return( -1 );
@@ -378,8 +381,8 @@ _WCRTLINK int __F_NAME(spawnve,_wspawnve)( int mode, const CHAR_TYPE * path,
         }
     }
     _POSIX_HANDLE_CLEANUP;
-    LIB_FREE( cmdline_mem );
-    LIB_FREE( np );
+    LIB_FREE( STK2NEAR( cmdline_mem ) );
+    LIB_FREE( STK2NEAR( np ) );
     lib_free( _envptr );
 #if defined( __DOS_086__ )
     if( _osmode_PROTMODE() ) {      /* if protect-mode e.g. DOS/16M */

@@ -1663,7 +1663,7 @@ bool IsFuncPtr( TYPEPTR typ )
     return( true );
 }
 
-bool IsPtrConvSafe( TREEPTR src, TYPEPTR newtyp, TYPEPTR oldtyp )
+bool IsPtrConvSafe( TREEPTR src, TYPEPTR newtyp, TYPEPTR oldtyp, bool cast_op )
 /****************************************************************
  * Check if pointer conversion is losing high (segment) bits.
  * A special dispensation is made for null pointer conversions; if the
@@ -1678,21 +1678,33 @@ bool IsPtrConvSafe( TREEPTR src, TYPEPTR newtyp, TYPEPTR oldtyp )
     segment_id          old_segid;
     type_modifiers      new_flags;
     type_modifiers      old_flags;
+    target_size         old_size;
 
     SKIP_TYPEDEFS( oldtyp );
     SKIP_TYPEDEFS( newtyp );
     assert( oldtyp->decl_type == TYP_POINTER );
     assert( newtyp->decl_type == TYP_POINTER );
+    new_flags = newtyp->u.p.decl_flags;
+    old_flags = oldtyp->u.p.decl_flags;
+    /*
+     * A based pointer stands for the far pointer made of its segment and
+     * its offset, so converting it to a pointer that is not based loses
+     * the segment. Size it as far, as the C++ compiler does
+     * (CgTypeTruncation), unless the conversion is an explicit cast.
+     * Conversions to a based pointer are left alone.
+     */
+    old_size = TypeSize( oldtyp );
+    if( !cast_op && (old_flags & FLAG_BASED) && (new_flags & FLAG_BASED) == 0 ) {
+        old_size = TARGET_FAR_POINTER;
+    }
     /*
      * If new type isn't smaller than old, assume conversion is safe.
      */
-    if( TypeSize( newtyp ) < TypeSize( oldtyp ) ) {
+    if( TypeSize( newtyp ) < old_size ) {
         is_safe = CheckZero( src );
         /*
          * Determine target pointer base.
          */
-        new_flags = newtyp->u.p.decl_flags;
-        old_flags = oldtyp->u.p.decl_flags;
         if( (new_flags & FLAG_BASED) || (old_flags & FLAG_BASED) ) {
             if( new_flags & FLAG_BASED ) {
                 switch( newtyp->u.p.based_kind ) {
@@ -1718,6 +1730,16 @@ bool IsPtrConvSafe( TREEPTR src, TYPEPTR newtyp, TYPEPTR oldtyp )
                 switch( oldtyp->u.p.based_kind ) {
                 case BASED_SEGNAME:
                     old_segid = oldtyp->u.p.segid;
+#if _INTEL_CPU
+                    /*
+                     * Unless SS floats, the stack is in the default data
+                     * segment, as for the address of an automatic variable.
+                     */
+                    if( old_segid == SEG_STACK
+                      && (TargetSwitches & CGSW_X86_FLOATING_SS) == 0 ) {
+                        old_segid = SEG_DATA;
+                    }
+#endif
                     break;
                 /*
                  * NYI: This could be smarter and check other based types.
@@ -1802,7 +1824,7 @@ convert:                                /* moved here */
                 if( (typ->u.p.decl_flags & MASK_ALL_MEM_MODELS)
                   != (newtyp->u.p.decl_flags & MASK_ALL_MEM_MODELS)
                   || ( opnd_type == TYP_ARRAY ) ) {
-                    if( !IsPtrConvSafe( opnd, newtyp, typ ) ) {
+                    if( !IsPtrConvSafe( opnd, newtyp, typ, cast_op ) ) {
                         if( cast_op ) {
                             CWarn1( ERR_CAST_POINTER_TRUNCATION );
                         } else {
