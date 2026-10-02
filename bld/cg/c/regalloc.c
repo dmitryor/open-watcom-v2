@@ -58,6 +58,85 @@
 #include "liveinfo.h"
 #include "cachecon.h"
 #include "regtree.h"
+#include "feprotos.h"
+#include "dumpio.h"
+#include "dumpins.h"
+#include "dumpconf.h"
+
+
+/* Register allocation log: with WCG_REGLOG set to a file name, one line per
+   conflict decided: procedure, operand, class, estimated savings, the
+   registers it may take, the registers it conflicts with, the source lines
+   its instructions span (with -d1), and the register given, "memory", or
+   "split". */
+static int  RegLogState = -1;
+
+static  void    RegLogLines( conflict_node *conf )
+{
+    block       *blk;
+    instruction *ins;
+    instruction *last;
+    int         lo;
+    int         hi;
+    int         line;
+
+    lo = hi = 0;
+    blk = conf->start_block;
+    if( blk != NULL && conf->ins_range.first != NULL ) {
+        last = conf->ins_range.last;
+        for( ins = conf->ins_range.first; ; ) {
+            line = ins->head.line_num;
+            if( line != 0 ) {
+                if( lo == 0 || line < lo )
+                    lo = line;
+                if( line > hi ) {
+                    hi = line;
+                }
+            }
+            if( ins->id == last->id )
+                break;
+            if( ins->head.opcode == OP_BLOCK ) {
+                if( blk->next_block == NULL )
+                    break;
+                blk = blk->next_block;
+                ins = (instruction *)&blk->ins;
+            }
+            ins = ins->head.next;
+        }
+    }
+    DumpInt( lo );
+    DumpChar( '-' );
+    DumpInt( hi );
+}
+
+static  void    RegLog( conflict_node *conf, const char *what, hw_reg_set reg )
+{
+    if( RegLogState < 0 )
+        RegLogState = ( FEGetEnv( "WCG_REGLOG" ) != NULL );
+    if( RegLogState == 0 )
+        return;
+    DumpRedirect();
+    DumpXString( FEName( AskForLblSym( CurrProc->label ) ) );
+    DumpChar( '\t' );
+    DumpOperand( conf->name );
+    DumpChar( '\t' );
+    DumpClass( conf->name->n.type_class );
+    DumpChar( '\t' );
+    DumpLong( conf->savings );
+    DumpChar( '\t' );
+    DumpPossible( conf->possible );
+    DumpChar( '\t' );
+    DumpRegName( conf->with.regs );
+    DumpChar( '\t' );
+    RegLogLines( conf );
+    DumpChar( '\t' );
+    if( what != NULL ) {
+        DumpXString( what );
+    } else {
+        DumpRegName( reg );
+    }
+    DumpNL();
+}
 
 
 enum allocation_state {
@@ -1167,6 +1246,11 @@ conflict_node   *GiveRegister( conflict_node *conf, bool needs_one )
         needs_one = true;
     }
     given = GiveBestReg( conf, tree, CurrProc->state.unalterable, needs_one );
+    if( HW_CEqual( given, HW_EMPTY ) ) {
+        RegLog( conf, _Is( conf, CST_NEEDS_INDEX | CST_NEEDS_SEGMENT ) ? "split" : "memory", given );
+    } else {
+        RegLog( conf, NULL, given );
+    }
     if( tree != NULL && ( tree->hi != NULL || tree->lo != NULL ) ) {
         LiveInfoUpdate(); /* the live info is FAR to conservative. */
     }
@@ -1266,6 +1350,7 @@ static  enum allocation_state    AssignConflicts( void )
             if( !only_const_temps && opnd->n.class == N_TEMP && (opnd->t.temp_flags & CONST_TEMP) )
                 return( ALLOC_CONST_TEMP );
             if( conf->savings == 0 || IsUncacheableMemory( conf->name ) ) {
+                RegLog( conf, conf->savings == 0 ? "memory-nosavings" : "memory-uncacheable", HW_EMPTY );
                 next = InMemory( conf );
             } else {
                 next = GiveRegister( conf, false );

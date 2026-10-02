@@ -33,6 +33,7 @@
 
 #include "_cgstd.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include "dumpio.h"
 
 /*
@@ -51,9 +52,12 @@ static  FILE    *dumpFile;
 void    DumpRedirect( void )
 /**************************/
 {
+    const char  *env;
+
     if( dumpFile != NULL )
         return;
-    dumpFile = fopen( dumpFileName, "wt" );
+    env = getenv( "WCG_REGLOG" );
+    dumpFile = fopen( env != NULL ? env : dumpFileName, env != NULL ? "at" : "wt" );
 }
 
 void    DumpUnredirect( void )
