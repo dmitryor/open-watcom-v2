@@ -70,6 +70,7 @@
 #include "conflict.h"
 #include "scmain.h"
 #include "generate.h"
+#include "regprop.h"
 #include "inline.h"
 #include "cse.h"
 #include "dataflo.h"
@@ -267,6 +268,14 @@ static  void            PostOptimize( void )
          */
         Score();
         DeadInstructions(); /* cleanup junk after Score() */
+        /*
+         * Registers holding a known constant across joins and loop heads,
+         * on the live information Score() left; score again to drop the
+         * loads that leaves unused.
+         */
+        RegPropagate();
+        Score();
+        DeadInstructions();
         if( !BlockByBlock )
             LoopRegInvariant();
 #if !_TARGET_RISC
