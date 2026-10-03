@@ -39,6 +39,7 @@
 #include "namelist.h"
 #include "loadstor.h"
 #include "regsave.h"
+#include "profwt.h"
 
 
 savings         Save;
@@ -109,6 +110,10 @@ void    SetCost( save_def *array, save_def cost )
 save_def        Weight( save_def value, block *blk )
 /**************************************************/
 {
+    save_def    weight;
+
+    if( ProfileWeight( blk, &weight ) )
+        return( value * weight );
     if( blk->depth < MAX_LOOP ) {
         value *= Save.loop_weight[blk->depth];
     } else {
