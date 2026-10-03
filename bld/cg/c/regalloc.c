@@ -62,6 +62,7 @@
 #include "dumpio.h"
 #include "dumpins.h"
 #include "dumpconf.h"
+#include "ilpsel.h"
 
 
 /* Register allocation log: with WCG_REGLOG set to a file name, one line per
@@ -1326,6 +1327,7 @@ static  enum allocation_state    AssignConflicts( void )
         }
     }
     ConstSavings();
+    IlpSelect();
 
     SortConflicts();
     state = ALLOC_BITS;
