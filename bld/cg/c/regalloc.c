@@ -53,6 +53,23 @@
 #include "cse.h"
 #include "dataflo.h"
 #include "savings.h"
+
+/*
+ * retal-c experiment: a temp caching a segment constant competes with the
+ * variables instead of waiting until they are allocated. x86 cannot load a
+ * segment register from an immediate, so a segment constant left in memory
+ * costs a scratch register and two instructions at every use.
+ */
+static bool SegConstTemp( name *op )
+{
+    name    *cons;
+
+    if( op->n.class != N_TEMP || (op->t.temp_flags & CONST_TEMP) == 0 )
+        return( false );
+    cons = op->v.symbol;
+    return( cons != NULL && cons->n.class == N_CONSTANT && cons->c.const_type == CONS_SEGMENT );
+}
+
 #include "regsave.h"
 #include "varusage.h"
 #include "liveinfo.h"
@@ -1333,7 +1350,7 @@ static  enum allocation_state    AssignConflicts( void )
     if( conf == NULL )
         return( state );
     opnd = conf->name;
-    if( opnd->n.class == N_TEMP && (opnd->t.temp_flags & CONST_TEMP) ) {
+    if( opnd->n.class == N_TEMP && (opnd->t.temp_flags & CONST_TEMP) && !SegConstTemp( opnd ) ) {
         only_const_temps = true;
     } else {
         only_const_temps = false;
@@ -1347,7 +1364,8 @@ static  enum allocation_state    AssignConflicts( void )
                 so that any CONST_TEMP's that aren't needed can get cleaned
                 up and their live information regenerated.
             */
-            if( !only_const_temps && opnd->n.class == N_TEMP && (opnd->t.temp_flags & CONST_TEMP) )
+            if( !only_const_temps && opnd->n.class == N_TEMP && (opnd->t.temp_flags & CONST_TEMP)
+              && !SegConstTemp( opnd ) )
                 return( ALLOC_CONST_TEMP );
             if( conf->savings == 0 || IsUncacheableMemory( conf->name ) ) {
                 RegLog( conf, conf->savings == 0 ? "memory-nosavings" : "memory-uncacheable", HW_EMPTY );

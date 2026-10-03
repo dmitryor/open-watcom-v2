@@ -39,6 +39,23 @@
 #include "conflict.h"
 #include "regsave.h"
 
+/*
+ * retal-c experiment: a temp caching a segment constant competes with the
+ * variables instead of waiting until they are allocated. x86 cannot load a
+ * segment register from an immediate, so a segment constant left in memory
+ * costs a scratch register and two instructions at every use.
+ */
+static bool SegConstTemp( name *op )
+{
+    name    *cons;
+
+    if( op->n.class != N_TEMP || (op->t.temp_flags & CONST_TEMP) == 0 )
+        return( false );
+    cons = op->v.symbol;
+    return( cons != NULL && cons->n.class == N_CONSTANT && cons->c.const_type == CONS_SEGMENT );
+}
+
+
 
 static  save_def        MaxConstSave;
 
@@ -116,7 +133,7 @@ bool    WorthProlog( conflict_node *conf, hw_reg_set reg )
     }
     op = conf->name;
     savings = conf->savings;
-    if( _ConstTemp( op ) ) {
+    if( _ConstTemp( op ) && !SegConstTemp( op ) ) {
         /* adjust for the initial load */
         cost += Weight( Save.load_cost[type_class] + Save.def_save[type_class], conf->start_block );
         /* Adjust by a fudge factor */
@@ -181,7 +198,7 @@ void        ConstSavings( void )
     }
     MaxConstSave = 0;
     for( conf = ConfList; conf != NULL; conf = conf->next_conflict ) {
-        if( !_ConstTemp( conf->name ) )
+        if( !_ConstTemp( conf->name ) || SegConstTemp( conf->name ) )
             continue;
         _SetFalse( conf, CST_SAVINGS_JUST_CALCULATED );
         if( _Isnt( conf, CST_SAVINGS_CALCULATED ) )
@@ -191,7 +208,7 @@ void        ConstSavings( void )
         MaxConstSave = conf->savings;
     }
     for( conf = ConfList; conf != NULL; conf = conf->next_conflict ) {
-        if( _ConstTemp( conf->name ) )
+        if( _ConstTemp( conf->name ) && !SegConstTemp( conf->name ) )
             continue;
         if( _Isnt( conf, CST_SAVINGS_JUST_CALCULATED ) )
             continue;
