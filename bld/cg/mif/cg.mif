@@ -81,6 +81,7 @@ cg_objs = &
     loopsplit.obj &
     profwt.obj &
     ilpsel.obj &
+    regprop.obj &
     regsave.obj &
     regtree.obj &
     revcond.obj &
