@@ -179,3 +179,10 @@ bool    ProfileWeight( block *blk, save_def *weight )
     *weight = 1;
     return( true );
 }
+
+
+void    ProfileRefresh( void )
+/****************************/
+{
+    WeightsFor = NULL;
+}

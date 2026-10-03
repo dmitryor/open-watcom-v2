@@ -14,3 +14,4 @@
 
 
 extern bool     ProfileWeight( block *blk, save_def *weight );
+extern void     ProfileRefresh( void );

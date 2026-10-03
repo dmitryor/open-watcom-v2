@@ -70,6 +70,7 @@
 #include "conflict.h"
 #include "scmain.h"
 #include "generate.h"
+#include "loopsplit.h"
 #include "inline.h"
 #include "cse.h"
 #include "dataflo.h"
@@ -721,6 +722,11 @@ void    Generate( bool routine_done )
     if( _MemCritical ) {
         Panic( false );
         return;
+    }
+    if( _IsModel( CGSW_GEN_LOOP_OPTIMIZATION ) ) {
+        /* retal-c experiment: rename variables inside loops (WCG_SPLIT) */
+        LoopSplit();
+        FindReferences();
     }
     MakeConflicts();
     if( _IsModel( CGSW_GEN_LOOP_OPTIMIZATION ) ) {
